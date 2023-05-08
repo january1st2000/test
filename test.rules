@@ -1,2 +1,3 @@
 alert icmp $HOME_NET any -> 8.8.8.8 any (msg:"Canh bao Giao thuc PING"; sid:1000001;)
 alert icmp any any -> $HOME_NET any (msg:"Canh bao Giao thuc PING"; sid:1000002;)
+alert icmp $HOME_NET any -> 192.168.2.1 any (msg:"Canh bao Giao thuc PING"; sid:1000002;)
