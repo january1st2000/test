@@ -1,16 +1,18 @@
-[2023-06-19T14:46:19,789][INFO ][org.reflections.Reflections] Reflections took 38 ms to scan 1 urls, producing 119 keys and 419 values 
-[2023-06-19T14:46:20,970][ERROR][logstash.filters.translate] Invalid setting for translate filter plugin:
+# Lookup destination IP reputation.
+translate {
+  dictionary_path => "${SYNLITE_SURICATA_DICT_PATH:/etc/logstash/synlite_suricata/dictionaries}/ip_rep_basic.json"
+  field => "[dest_ip]"
+  destination => "[@metadata][dest_rep_label]"
+}
 
-  filter {
-    translate {
-      # This setting must be a path
-      # File does not exist or cannot be opened /etc/logstash/synlite_suricata/dictionaries/ip_rep_basic.yml
-      dictionary_path => "/etc/logstash/synlite_suricata/dictionaries/ip_rep_basic.yml"
-      ...
-    }
+# Parse the IP reputation label into tags.
+if [@metadata][dest_rep_label] {
+  ruby {
+    init => "
+      require 'json'
+    "
+    code => "
+      event.set('[dest_rep_tags]', JSON.parse(event.get('[@metadata][dest_rep_label]')))
+    "
   }
-[2023-06-19T14:46:20,974][ERROR][logstash.agent           ] Failed to execute action {:action=>LogStash::PipelineAction::Create/pipeline_id:main, :exception=>"Java::JavaLang::IllegalStateException", :message=>"Unable to configure plugins: (ConfigurationError) Something is wrong with your configuration.", :backtrace=>["org.logstash.config.ir.CompiledPipeline.<init>(CompiledPipeline.java:120)", "org.logstash.execution.JavaBasePipelineExt.initialize(JavaBasePipelineExt.java:86)", "org.logstash.execution.JavaBasePipelineExt$INVOKER$i$1$0$initialize.call(JavaBasePipelineExt$INVOKER$i$1$0$initialize.gen)", "org.jruby.internal.runtime.methods.JavaMethod$JavaMethodN.call(JavaMethod.java:837)", "org.jruby.ir.runtime.IRRuntimeHelpers.instanceSuper(IRRuntimeHelpers.java:1169)", "org.jruby.ir.runtime.IRRuntimeHelpers.instanceSuperSplatArgs(IRRuntimeHelpers.java:1156)", "org.jruby.ir.targets.InstanceSuperInvokeSite.invoke(InstanceSuperInvokeSite.java:39)", "usr.share.logstash.logstash_minus_core.lib.logstash.java_pipeline.RUBY$method$initialize$0(/usr/share/logstash/logstash-core/lib/logstash/java_pipeline.rb:48)", "org.jruby.internal.runtime.methods.CompiledIRMethod.call(CompiledIRMethod.java:80)", "org.jruby.internal.runtime.methods.MixedModeIRMethod.call(MixedModeIRMethod.java:70)", "org.jruby.runtime.callsite.CachingCallSite.cacheAndCall(CachingCallSite.java:333)", "org.jruby.runtime.callsite.CachingCallSite.call(CachingCallSite.java:87)", "org.jruby.RubyClass.newInstance(RubyClass.java:939)", "org.jruby.RubyClass$INVOKER$i$newInstance.call(RubyClass$INVOKER$i$newInstance.gen)", "org.jruby.ir.targets.InvokeSite.invoke(InvokeSite.java:207)", "usr.share.logstash.logstash_minus_core.lib.logstash.pipeline_action.create.RUBY$method$execute$0(/usr/share/logstash/logstash-core/lib/logstash/pipeline_action/create.rb:52)", "usr.share.logstash.logstash_minus_core.lib.logstash.pipeline_action.create.RUBY$method$execute$0$__VARARGS__(/usr/share/logstash/logstash-core/lib/logstash/pipeline_action/create.rb:50)", "org.jruby.internal.runtime.methods.CompiledIRMethod.call(CompiledIRMethod.java:80)", "org.jruby.internal.runtime.methods.MixedModeIRMethod.call(MixedModeIRMethod.java:70)", "org.jruby.ir.targets.InvokeSite.invoke(InvokeSite.java:207)", "usr.share.logstash.logstash_minus_core.lib.logstash.agent.RUBY$block$converge_state$2(/usr/share/logstash/logstash-core/lib/logstash/agent.rb:392)", "org.jruby.runtime.CompiledIRBlockBody.callDirect(CompiledIRBlockBody.java:138)", "org.jruby.runtime.IRBlockBody.call(IRBlockBody.java:58)", "org.jruby.runtime.IRBlockBody.call(IRBlockBody.java:52)", "org.jruby.runtime.Block.call(Block.java:139)", "org.jruby.RubyProc.call(RubyProc.java:318)", "org.jruby.internal.runtime.RubyRunnable.run(RubyRunnable.java:105)", "java.base/java.lang.Thread.run(Thread.java:829)"]}
-[2023-06-19T14:46:20,978][ERROR][logstash.agent           ] An exception happened when converging configuration {:exception=>LogStash::Error, :message=>"Don't know how to handle `Java::JavaLang::IllegalStateException` for `PipelineAction::Create<main>`"}
-[2023-06-19T14:46:20,983][FATAL][logstash.runner          ] An unexpected error occurred! {:error=>#<LogStash::Error: Don't know how to handle `Java::JavaLang::IllegalStateException` for `PipelineAction::Create<main>`>, :backtrace=>["org/logstash/execution/ConvergeResultExt.java:135:in `create'", "org/logstash/execution/ConvergeResultExt.java:60:in `add'", "/usr/share/logstash/logstash-core/lib/logstash/agent.rb:405:in `block in converge_state'"]}
-[2023-06-19T14:46:20,990][FATAL][org.logstash.Logstash    ] Logstash stopped processing because of an error: (SystemExit) exit
-org.jruby.exceptions.SystemExit: (SystemExit) exit
+}
